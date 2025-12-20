@@ -1,20 +1,53 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from src.db import create_db_and_tables
 from src.users.manager import auth_backend, fastapi_users
 from src.users.schema import UserRead, UserCreate, UserUpdate
 from src.books.router import router as books_router
+import os
+import time
+from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_db_and_tables()
-    print("🚀 Base de datos inicializada y lista.")
+    print("Base de datos inicializada y lista.")
     yield
 
 app = FastAPI(
     title="BookSocial API",
     lifespan=lifespan
 )
+
+MONGO_URL = os.getenv("MONGO_URL")
+mongo_client = AsyncIOMotorClient(MONGO_URL)
+mongo_db = mongo_client["Booklogs"]
+
+@app.middleware("http")
+async def log_request(request: Request, call_next):
+    start_time = time.time()
+
+    response =  await call_next(request)
+    process_time = time.time() - start_time
+
+    log_entry = {
+        "path": request.url.path,
+        "method": request.method,
+        "status_code": response.status_code,
+        "client_ip": request.client.host,
+        "duration": process_time,
+        "timestamp": time.time()
+    }
+
+    if request.method != "OPTIONS":
+        await mongo_db["api_logs"].insert_one(log_entry)
+        print(f"Log creada: {request.method} {request.url.path} ({process_time:.4f}s)")
+
+    return response
+
 
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
