@@ -8,6 +8,7 @@ import os
 import time
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -20,6 +21,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="BookSocial API",
     lifespan=lifespan
+)
+
+origins = [
+    "http://localhost:5173", # El puerto donde corre tu React
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 MONGO_URL = os.getenv("MONGO_URL")
