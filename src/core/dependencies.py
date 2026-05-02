@@ -9,15 +9,11 @@ from src.books.models import Books
 
 
 async def get_book_or_404(
-    book_id: str,
+    book_id: uuid.UUID,
     session: AsyncSession = Depends(get_async_session),
 ) -> Books:
-    try:
-        book_uuid = uuid.UUID(book_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID no valido")
     result = await session.execute(
-        select(Books).where(Books.id == book_uuid, Books.is_deleted == False)
+        select(Books).where(Books.id == book_id, Books.is_deleted == False)
     )
     book = result.scalar_one_or_none()
     if not book:
