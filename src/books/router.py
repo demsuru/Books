@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
@@ -41,9 +41,9 @@ async def get_all_books(
 ):
     query = select(Books).where(Books.is_deleted == False)
     if search:
-        query = query.where(func.lower(Books.title).contains(search.lower()))
+        query = query.where(Books.title.ilike(f"%{search}%"))
     if author:
-        query = query.where(func.lower(Books.author).contains(author.lower()))
+        query = query.where(Books.author.ilike(f"%{author}%"))
 
     count_result = await session.execute(select(func.count()).select_from(query.subquery()))
     total = count_result.scalar()
@@ -119,9 +119,10 @@ async def delete_book(
 
 
 # POST PARA MARCAR LIBROS COMO LEIDO+SCORE + ASOCIARLO A TABLA USUARIO-LIBRO
-@router.post("/{book_id}/rate", response_model=RatingResponse)
+@router.post("/{book_id}/rate", response_model=RatingResponse, status_code=201)
 async def rate_book(
     rating: RatingCreate,
+    response: Response,
     session: AsyncSession = Depends(get_async_session),
     user=Depends(current_active_user),
     book: Books = Depends(get_book_or_404),
@@ -139,6 +140,7 @@ async def rate_book(
         if "is_read" in rating.model_fields_set:
             association.is_read = rating.is_read
         await session.commit()
+        response.status_code = 200
         return RatingResponse(message="Puntuacion actualizada", status="updated")
     else:
         new_association = UserBookAssociation(
