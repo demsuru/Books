@@ -1,30 +1,43 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from src.db import create_db_and_tables
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+import time
+from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.core.config import settings
+from src.core.logging import setup_logging, logger
+from src.core.exceptions import register_exception_handlers
+from src.db import create_db_and_tables, get_async_session
 from src.users.manager import auth_backend, fastapi_users
 from src.users.schema import UserRead, UserCreate, UserUpdate
 from src.books.router import router as books_router
-import os
-import time
-from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()
+
+mongo_client = AsyncIOMotorClient(settings.mongo_url)
+mongo_db = mongo_client["Booklogs"]
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     await create_db_and_tables()
-    print("Base de datos inicializada y lista.")
+    logger.info("Base de datos inicializada y lista.")
     yield
+    mongo_client.close()
+
 
 app = FastAPI(
     title="BookSocial API",
     lifespan=lifespan
 )
 
+register_exception_handlers(app)
+
 origins = [
-    "http://localhost:5173", # El puerto donde corre tu React
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
@@ -36,15 +49,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MONGO_URL = os.getenv("MONGO_URL")
-mongo_client = AsyncIOMotorClient(MONGO_URL)
-mongo_db = mongo_client["Booklogs"]
 
 @app.middleware("http")
 async def log_request(request: Request, call_next):
     start_time = time.time()
-
-    response =  await call_next(request)
+    response = await call_next(request)
     process_time = time.time() - start_time
 
     log_entry = {
@@ -58,7 +67,7 @@ async def log_request(request: Request, call_next):
 
     if request.method != "OPTIONS":
         await mongo_db["api_logs"].insert_one(log_entry)
-        print(f"Log creada: {request.method} {request.url.path} ({process_time:.4f}s)")
+        logger.info("Log: %s %s (%.4fs)", request.method, request.url.path, process_time)
 
     return response
 
@@ -69,13 +78,11 @@ app.include_router(
     tags=["Auth"],
 )
 
-
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
     tags=["Auth"],
 )
-
 
 app.include_router(
     fastapi_users.get_verify_router(UserRead),
@@ -83,13 +90,11 @@ app.include_router(
     tags=["Auth"],
 )
 
-
 app.include_router(
     fastapi_users.get_reset_password_router(),
     prefix="/auth",
     tags=["Auth"],
 )
-
 
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
@@ -100,9 +105,33 @@ app.include_router(
 app.include_router(
     books_router,
     prefix="/books",
-    tags=["Books"]
+    tags=["Books"],
 )
+
 
 @app.get("/")
 async def root():
     return {"message": "Ok"}
+
+
+@app.get("/health")
+async def health_check(session: AsyncSession = Depends(get_async_session)):
+    db_status = "ok"
+    mongo_status = "ok"
+
+    try:
+        await session.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    try:
+        await mongo_db.command("ping")
+    except Exception:
+        mongo_status = "error"
+
+    if db_status == "error" or mongo_status == "error":
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "db": db_status, "mongo": mongo_status}
+        )
+    return {"status": "ok", "db": "ok", "mongo": "ok"}

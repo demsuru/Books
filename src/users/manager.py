@@ -9,6 +9,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from src.users.models import User
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db import get_async_session
+from src.core.logging import logger
 
 
 
@@ -20,13 +21,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     verification_token_secret = SECRET
 
     async def on_after_register(self, user: User, request: Optional[Request] = None):
-        print(f"Nuevo usuario registrado: {user.id}")
+        logger.info("Nuevo usuario registrado: %s", user.id)
 
     async def on_after_forgot_password(self, user: User, token: str, request: Optional[Request] = None):
-        print(f"Usuario {user.id} olvidó su contraseña. Token: {token}")
+        logger.warning("Usuario %s olvidó su contraseña.", user.id)
 
     async def on_after_request_verify(self, user: User, token: str, request: Optional[Request] = None):
-        print(f"Verificación solicitada para {user.id}. Token: {token}")
+        logger.info("Verificación solicitada para %s.", user.id)
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     yield SQLAlchemyUserDatabase(session, User)
