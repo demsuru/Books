@@ -1,93 +1,134 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-import uuid
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from src.db import get_async_session
 from src.books.models import Books, UserBookAssociation
-from src.books.schema import BookCreate, BookRateList, BookRead, RatingCreate, BookUpdate
-
-from src.users.manager import auth_backend, current_active_user, fastapi_users
-
+from src.books.schema import (
+    BookCreate, BookRateList, BookRead, RatingCreate, BookUpdate,
+    BookListResponse, RatingResponse
+)
+from src.users.manager import current_active_user
+from src.core.dependencies import get_book_or_404, PaginationParams
 
 router = APIRouter()
 
-# POST PARA CREAR NUEVOS LIBROS 
-@router.post("/", response_model=BookRead)
+
+# POST PARA CREAR NUEVOS LIBROS
+@router.post("/", response_model=BookRead, status_code=201)
 async def create_book(
     book_data: BookCreate,
     session: AsyncSession = Depends(get_async_session),
-    user = Depends(current_active_user)
+    user=Depends(current_active_user),
 ):
     new_book = Books(**book_data.model_dump())
     new_book.creator_id = user.id
-
     session.add(new_book)
     await session.commit()
     await session.refresh(new_book)
     return new_book
 
 
-# GET PARA VER TODOS LOS LIBROS
-@router.get("/", response_model=list[BookRead])
+# GET PARA VER TODOS LOS LIBROS (con paginacion y filtros)
+@router.get("/", response_model=BookListResponse)
 async def get_all_books(
     session: AsyncSession = Depends(get_async_session),
-    # user; UserRead = Depends(current_active_user)
+    pagination: PaginationParams = Depends(),
+    search: str | None = Query(None),
+    author: str | None = Query(None),
 ):
-    result = await session.execute(select(Books))
-    return result.scalars().all()
+    query = select(Books).where(Books.is_deleted == False)
+    if search:
+        query = query.where(func.lower(Books.title).contains(search.lower()))
+    if author:
+        query = query.where(func.lower(Books.author).contains(author.lower()))
+
+    count_result = await session.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar()
+
+    result = await session.execute(query.offset(pagination.offset).limit(pagination.limit))
+    items = result.scalars().all()
+
+    pages = (total + pagination.limit - 1) // pagination.limit if total > 0 else 0
+
+    return BookListResponse(items=items, total=total, page=pagination.page, pages=pages)
 
 
-# PATCH PARA MODIFICAR LIBROS EXISTENTES
+# GET PARA BUSCAR LOS LIBROS ASOCIADOS A UN USUARIO
+@router.get("/mybooks", response_model=list[BookRateList])
+async def get_my_books(
+    user=Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    stmt = (
+        select(UserBookAssociation)
+        .where(UserBookAssociation.user_id == user.id)
+        .join(UserBookAssociation.book)
+        .where(Books.is_deleted == False)
+        .options(selectinload(UserBookAssociation.book))
+    )
+    result = await session.execute(stmt)
+    associations = result.scalars().all()
+    return [
+        BookRateList(
+            id=a.book.id,
+            title=a.book.title,
+            author=a.book.author,
+            year=a.book.year,
+            score=a.score,
+            is_read=a.is_read,
+        )
+        for a in associations
+    ]
+
+
+# PATCH PARA MODIFICAR LIBROS EXISTENTES (con verificacion de propiedad)
 @router.patch("/{book_id}", response_model=BookRead)
 async def update_book(
-    book_id: str,
     book_update: BookUpdate,
     session: AsyncSession = Depends(get_async_session),
-    user = Depends(current_active_user)
+    user=Depends(current_active_user),
+    book: Books = Depends(get_book_or_404),
 ):
-    try:
-        book_uuid = uuid.UUID(book_id)
-
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID no valido")
-
-    result = await session.execute(select(Books).where(Books.id == book_uuid))
-    book = result.scalar_one_or_none()
-
-    if not book:
-        raise HTTPException(status_code=404, detail="Libro no Encontrado")
-    
+    if user.role != "admin" and book.creator_id != user.id:
+        raise HTTPException(status_code=403, detail="Sin permisos sobre este libro")
     update_data = book_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(book, key, value)
-
     session.add(book)
     await session.commit()
     await session.refresh(book)
     return book
 
-# POST PARA MERCAR LIBROS COMO LEIDO+SCORE + ASOCIARLO A TABLA USUARIO-LIBRO
-@router.post("/{book_id}/rate")
-async def rate_book(
-    book_id: str,
-    rating: RatingCreate,
-    user = Depends(current_active_user),
+
+# DELETE PARA BORRADO LOGICO DE LIBROS (soft delete)
+@router.delete("/{book_id}", status_code=204)
+async def delete_book(
     session: AsyncSession = Depends(get_async_session),
+    user=Depends(current_active_user),
+    book: Books = Depends(get_book_or_404),
 ):
-    try: 
-        book_uuid = uuid.UUID(book_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="ID no valido")
-    
-    book_exists = await session.execute(select(Books).where(Books.id == book_uuid))
-    if not book_exists.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="El libro no existe")
-    
+    if user.role != "admin" and book.creator_id != user.id:
+        raise HTTPException(status_code=403, detail="Sin permisos sobre este libro")
+    book.is_deleted = True
+    book.deleted_at = datetime.now(timezone.utc)
+    session.add(book)
+    await session.commit()
+
+
+# POST PARA MARCAR LIBROS COMO LEIDO+SCORE + ASOCIARLO A TABLA USUARIO-LIBRO
+@router.post("/{book_id}/rate", response_model=RatingResponse)
+async def rate_book(
+    rating: RatingCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user=Depends(current_active_user),
+    book: Books = Depends(get_book_or_404),
+):
     stmt = select(UserBookAssociation).where(
         UserBookAssociation.user_id == user.id,
-        UserBookAssociation.book_id == book_uuid
+        UserBookAssociation.book_id == book.id,
     )
     result = await session.execute(stmt)
     association = result.scalar_one_or_none()
@@ -95,82 +136,36 @@ async def rate_book(
     if association:
         if rating.score is not None:
             association.score = rating.score
-
-        if 'is_read' in rating.model_fields_set:
+        if "is_read" in rating.model_fields_set:
             association.is_read = rating.is_read
-
-        message = "Puntuacion actualizada"
-
+        await session.commit()
+        return RatingResponse(message="Puntuacion actualizada", status="updated")
     else:
-
         new_association = UserBookAssociation(
-            user_id = user.id,
-            book_id = book_uuid,
-            score = rating.score,
-            is_read = rating.is_read or False
+            user_id=user.id,
+            book_id=book.id,
+            score=rating.score,
+            is_read=rating.is_read or False,
         )
         session.add(new_association)
-        message = "Libro añadido a tu lista"
+        await session.commit()
+        return RatingResponse(message="Libro añadido a tu lista", status="created")
 
-    await session.commit()
-    return {"message": message}
 
-# GET PARA BUSCAR LOS LIBROS ASOCIADOS A UN USUARIO
-@router.get("/mybooks", response_model=list[BookRateList])
-async def get_my_books(
-    user = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-):
-    stmt = (
-        select(UserBookAssociation)
-        .where(UserBookAssociation.user_id == user.id)
-        .options(selectinload(UserBookAssociation.book))
-    )
-
-    result = await session.execute(stmt)
-    association = result.scalars().all()
-
-    response_list = []
-    for assoc in association:
-        response_list.append(
-            BookRateList(
-                id=assoc.book.id,
-                title=assoc.book.title,
-                author=assoc.book.author,
-                year=assoc.book.year,
-                score=assoc.score,
-                is_read=assoc.is_read,
-            )
-        )
-    return response_list
-
-#DELETE PARA LIBROS ASOSCIADOS A UN USUARIO
-@router.delete("/{book_id}/rate")
+# DELETE PARA LIBROS ASOCIADOS A UN USUARIO
+@router.delete("/{book_id}/rate", status_code=204)
 async def remove_book_association(
-    book_id: str,
-    user = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
+    user=Depends(current_active_user),
+    book: Books = Depends(get_book_or_404),
 ):
-    try:
-        book_uuid = uuid.UUID(book_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Id no valido")
-    
     stmt = select(UserBookAssociation).where(
         UserBookAssociation.user_id == user.id,
-        UserBookAssociation.book_id == book_uuid
+        UserBookAssociation.book_id == book.id,
     )
-
     result = await session.execute(stmt)
     association = result.scalar_one_or_none()
-
     if not association:
-        raise HTTPException(
-            status_code=404,
-            detail="El libro no esta en tu lista"
-        )
-    
+        raise HTTPException(status_code=404, detail="El libro no esta en tu lista")
     await session.delete(association)
     await session.commit()
-
-    return None
