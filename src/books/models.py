@@ -20,6 +20,8 @@ class Books(Base):
     title = Column(String, nullable=False)
     author = Column(String, nullable=False)
     year = Column(Integer, nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class UserBookAssociation(Base):
