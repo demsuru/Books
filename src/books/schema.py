@@ -34,7 +34,7 @@ class BookRateList(BaseModel):
 
 class RatingCreate(BaseModel):
     score: Optional[float] = Field(
-        None, 
+        None,
         ge=0.0,
         le=10.0,
         description="Puntuacion del libro (de 1 a 10). OPcional."
@@ -48,8 +48,17 @@ class RatingCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "score": 4.3, 
+                "score": 4.3,
                 "is_read": True,
             }
         }
 
+class BookListResponse(BaseModel):
+    items: list[BookRead]
+    total: int
+    page: int
+    pages: int
+
+class RatingResponse(BaseModel):
+    message: str
+    status: str
