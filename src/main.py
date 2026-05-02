@@ -60,7 +60,7 @@ async def log_request(request: Request, call_next):
         "path": request.url.path,
         "method": request.method,
         "status_code": response.status_code,
-        "client_ip": request.client.host,
+        "client_ip": request.client.host if request.client else None,
         "duration": process_time,
         "timestamp": time.time()
     }

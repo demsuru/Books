@@ -16,7 +16,7 @@ class BookRead(BaseModel):
     id: uuid.UUID
     title: str
     author: str
-    year: int
+    year: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -25,7 +25,7 @@ class BookRateList(BaseModel):
     id: uuid.UUID
     title: str
     author: str
-    year: int
+    year: Optional[int] = None
     score: Optional[float]
     is_read: bool
 

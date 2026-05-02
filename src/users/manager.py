@@ -1,7 +1,5 @@
 import uuid
-import os
 from typing import Optional
-from dotenv import load_dotenv
 from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
@@ -10,11 +8,9 @@ from src.users.models import User
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db import get_async_session
 from src.core.logging import logger
+from src.core.config import settings
 
-
-
-load_dotenv()
-SECRET = os.getenv("SECRET")
+SECRET = settings.secret.get_secret_value()
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = SECRET
