@@ -21,7 +21,7 @@ const bookService = {
     if (author) params.set('author', author);
     logger.info('GET /books/', params.toString());
     const res = await fetch(`${BASE}/books/?${params}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {},
     });
     return handleResponse(res);
   },

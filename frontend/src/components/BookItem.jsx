@@ -22,7 +22,7 @@ export default function BookItem({ book, onDelete, onUpdate }) {
           </button>
         )}
         {isOwner && (
-          <button className="btn btn-danger" onClick={() => onDelete(book.id, token)}>
+          <button className="btn btn-danger" onClick={() => onDelete(book.id)}>
             Delete
           </button>
         )}

@@ -26,6 +26,7 @@ export default function MyBooksPage() {
       toast.success('Removed from your list');
     } catch (err) {
       toast.error(err.message || 'Could not remove');
+      logger.error('removeRating failed', err.message);
     }
   };
 
