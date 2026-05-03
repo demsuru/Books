@@ -37,6 +37,8 @@ def promote_user(conn: sqlite3.Connection, email: str) -> str:
     if cur.rowcount == 0:
         raise ValueError(f"Usuario '{email}' no encontrado en la base de datos")
     row = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    if row is None:
+        raise ValueError(f"Usuario '{email}' no encontrado en la base de datos")
     return row[0]
 
 
