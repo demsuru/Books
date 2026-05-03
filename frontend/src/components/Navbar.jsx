@@ -13,18 +13,18 @@ export default function Navbar() {
 
   return (
     <nav className={styles.nav}>
-      <Link to="/" className={styles.logo}>BookSocial</Link>
+      <Link to="/" className={styles.logo}>Books</Link>
       <div className={styles.links}>
         {user ? (
           <>
-            <Link to="/mybooks" className={styles.link}>My Books</Link>
+            <Link to="/mybooks" className={styles.link}>Mis libros</Link>
             <span className={styles.email}>{user.email}</span>
-            <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
+            <button className="btn btn-ghost" onClick={handleLogout}>Salir</button>
           </>
         ) : (
           <>
-            <Link to="/login" className={styles.link}>Login</Link>
-            <Link to="/register" className="btn btn-primary">Register</Link>
+            <Link to="/login" className={styles.link}>Entrar</Link>
+            <Link to="/register" className="btn btn-primary">Registrarse</Link>
           </>
         )}
       </div>

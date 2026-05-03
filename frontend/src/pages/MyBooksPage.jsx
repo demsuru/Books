@@ -15,7 +15,7 @@ export default function MyBooksPage() {
     if (!token) return;
     bookService.getMyBooks(token)
       .then((data) => { setBooks(data); logger.info('My books loaded', data.length); })
-      .catch((err) => { toast.error('Could not load your books'); logger.error('getMyBooks failed', err.message); })
+      .catch((err) => { toast.error('No se pudieron cargar tus libros'); logger.error('getMyBooks failed', err.message); })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -23,9 +23,9 @@ export default function MyBooksPage() {
     try {
       await bookService.removeRating(id, token);
       setBooks((prev) => prev.filter((b) => b.id !== id));
-      toast.success('Removed from your list');
+      toast.success('Eliminado de tu lista');
     } catch (err) {
-      toast.error(err.message || 'Could not remove');
+      toast.error(err.message || 'No se pudo eliminar');
       logger.error('removeRating failed', err.message);
     }
   };
@@ -34,11 +34,11 @@ export default function MyBooksPage() {
 
   return (
     <div>
-      <h1 className={styles.heading}>My Books</h1>
+      <h1 className={styles.heading}>Mis libros</h1>
       {loading ? (
-        <div className={styles.loading}>Loading…</div>
+        <div className={styles.loading}>Cargando…</div>
       ) : books.length === 0 ? (
-        <p className={styles.empty}>You haven't added any books yet.</p>
+        <p className={styles.empty}>Aún no has agregado ningún libro.</p>
       ) : (
         <ul className={styles.list}>
           {books.map((book) => (
@@ -49,14 +49,14 @@ export default function MyBooksPage() {
               </div>
               <div className={styles.stats}>
                 <span className={styles.badge + (book.is_read ? ' ' + styles.read : '')}>
-                  {book.is_read ? 'Read' : 'Unread'}
+                  {book.is_read ? 'Leído' : 'Sin leer'}
                 </span>
                 <span className={styles.score}>
-                  {book.score != null ? `${book.score}/10` : 'Not rated'}
+                  {book.score != null ? `${book.score}/10` : 'Sin puntuación'}
                 </span>
               </div>
               <button className="btn btn-danger" onClick={() => handleRemove(book.id)}>
-                Remove
+                Eliminar
               </button>
             </li>
           ))}

@@ -12,10 +12,10 @@ export default function RatingSlider({ bookId, token, onClose, onSaved }) {
     setLoading(true);
     try {
       await bookService.rateBook(bookId, { score, is_read: isRead }, token);
-      toast.success('Rating saved');
+      toast.success('Puntuación guardada');
       onSaved();
     } catch (err) {
-      toast.error(err.message || 'Could not save rating');
+      toast.error(err.message || 'No se pudo guardar la puntuación');
     } finally {
       setLoading(false);
     }
@@ -42,14 +42,14 @@ export default function RatingSlider({ bookId, token, onClose, onSaved }) {
             checked={isRead}
             onChange={(e) => setIsRead(e.target.checked)}
           />
-          Mark as read
+          Marcar como leído
         </label>
       </div>
       <div className={styles.btns}>
         <button className="btn btn-primary" onClick={handleSave} disabled={loading}>
-          {loading ? 'Saving…' : 'Save'}
+          {loading ? 'Guardando…' : 'Guardar'}
         </button>
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
       </div>
     </div>
   );

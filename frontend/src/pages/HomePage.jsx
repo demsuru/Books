@@ -27,7 +27,7 @@ export default function HomePage() {
       setPages(data.pages);
       logger.info('Books loaded', data.total);
     } catch (err) {
-      toast.error('Could not load books');
+      toast.error('No se pudieron cargar los libros');
       logger.error('getBooks failed', err.message);
     } finally {
       setLoading(false);
@@ -44,7 +44,7 @@ export default function HomePage() {
 
   const handleCreate = async (data) => {
     await bookService.createBook(data, token);
-    toast.success('Book added');
+    toast.success('Libro agregado');
     setShowForm(false);
     setPage(1);
     setQuery('');
@@ -55,10 +55,10 @@ export default function HomePage() {
   const handleDelete = async (id) => {
     try {
       await bookService.deleteBook(id, token);
-      toast.success('Book deleted');
+      toast.success('Libro eliminado');
       fetchBooks();
     } catch (err) {
-      toast.error(err.message || 'Could not delete book');
+      toast.error(err.message || 'No se pudo eliminar el libro');
     }
   };
 
@@ -67,11 +67,11 @@ export default function HomePage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.heading}>Books</h1>
-          {!loading && <p className={styles.count}>{total} {total === 1 ? 'book' : 'books'}</p>}
+          {!loading && <p className={styles.count}>{total} {total === 1 ? 'libro' : 'libros'}</p>}
         </div>
         {user && (
           <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? 'Cancel' : 'Add book'}
+            {showForm ? 'Cancelar' : 'Agregar libro'}
           </button>
         )}
       </div>
@@ -87,21 +87,21 @@ export default function HomePage() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search title or author…"
+          placeholder="Buscar título o autor…"
           className={styles.searchInput}
         />
-        <button type="submit" className="btn btn-ghost">Search</button>
+        <button type="submit" className="btn btn-ghost">Buscar</button>
         {query && (
           <button type="button" className="btn btn-ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1); }}>
-            Clear
+            Limpiar
           </button>
         )}
       </form>
 
       {loading ? (
-        <div className={styles.loading}>Loading…</div>
+        <div className={styles.loading}>Cargando…</div>
       ) : books.length === 0 ? (
-        <p className={styles.empty}>No books found.</p>
+        <p className={styles.empty}>No se encontraron libros.</p>
       ) : (
         <div className={styles.grid}>
           {books.map((book) => (
@@ -113,11 +113,11 @@ export default function HomePage() {
       {pages > 1 && (
         <div className={styles.pagination}>
           <button className="btn btn-ghost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-            Previous
+            Anterior
           </button>
-          <span className={styles.pageInfo}>Page {page} of {pages}</span>
+          <span className={styles.pageInfo}>Página {page} de {pages}</span>
           <button className="btn btn-ghost" disabled={page === pages} onClick={() => setPage((p) => p + 1)}>
-            Next
+            Siguiente
           </button>
         </div>
       )}

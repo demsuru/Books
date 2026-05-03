@@ -19,7 +19,7 @@ export default function RegisterPage() {
       await register(email, password);
       navigate('/login');
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      setError(err.message || 'Error al registrarse');
     } finally {
       setLoading(false);
     }
@@ -28,10 +28,10 @@ export default function RegisterPage() {
   return (
     <div className={styles.wrapper}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Create account</h1>
+        <h1 className={styles.title}>Crear cuenta</h1>
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Correo electrónico</label>
             <input
               id="email"
               type="email"
@@ -42,7 +42,7 @@ export default function RegisterPage() {
             />
           </div>
           <div className="form-field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Contraseña</label>
             <input
               id="password"
               type="password"
@@ -54,11 +54,11 @@ export default function RegisterPage() {
           </div>
           {error && <p className={styles.error}>{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-            {loading ? 'Creating…' : 'Create account'}
+            {loading ? 'Creando…' : 'Crear cuenta'}
           </button>
         </form>
         <p className={styles.footer}>
-          Already have an account? <Link to="/login">Sign in</Link>
+          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
         </p>
       </div>
     </div>

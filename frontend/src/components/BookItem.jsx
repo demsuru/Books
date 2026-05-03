@@ -18,12 +18,12 @@ export default function BookItem({ book, onDelete, onUpdate }) {
       <div className={styles.actions}>
         {user && !showRating && (
           <button className="btn btn-ghost" onClick={() => setShowRating(true)}>
-            Rate
+            Puntuar
           </button>
         )}
         {isOwner && (
           <button className="btn btn-danger" onClick={() => onDelete(book.id)}>
-            Delete
+            Eliminar
           </button>
         )}
       </div>

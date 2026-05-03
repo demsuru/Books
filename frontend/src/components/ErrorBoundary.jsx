@@ -16,9 +16,9 @@ export default class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
-          <h2>Something went wrong.</h2>
+          <h2>Algo salió mal.</h2>
           <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-3)' }}>
-            Refresh the page or try again later.
+            Recarga la página o inténtalo más tarde.
           </p>
         </div>
       );

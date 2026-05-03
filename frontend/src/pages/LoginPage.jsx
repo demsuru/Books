@@ -19,7 +19,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
@@ -28,10 +28,10 @@ export default function LoginPage() {
   return (
     <div className={styles.wrapper}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Sign in</h1>
+        <h1 className={styles.title}>Iniciar sesión</h1>
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className="form-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Correo electrónico</label>
             <input
               id="email"
               type="email"
@@ -42,7 +42,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="form-field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Contraseña</label>
             <input
               id="password"
               type="password"
@@ -54,11 +54,11 @@ export default function LoginPage() {
           </div>
           {error && <p className={styles.error}>{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
         <p className={styles.footer}>
-          No account? <Link to="/register">Register</Link>
+          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
         </p>
       </div>
     </div>
