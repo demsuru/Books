@@ -48,3 +48,19 @@ def insert_books(conn: sqlite3.Connection, rows: list[tuple]) -> None:
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
+
+
+def main() -> None:
+    books_raw = load_books(JSON_PATH)
+    valid, skipped = filter_books(books_raw)
+
+    with sqlite3.connect(DB_PATH) as conn:
+        creator_id = promote_user(conn, CREATOR_EMAIL)
+        rows = build_rows(valid, creator_id)
+        insert_books(conn, rows)
+
+    print(f"{len(rows)} libros insertados, {skipped} omitidos (anonymous)")
+
+
+if __name__ == "__main__":
+    main()
