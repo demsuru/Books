@@ -55,6 +55,10 @@ def main() -> None:
     valid, skipped = filter_books(books_raw)
 
     with sqlite3.connect(DB_PATH) as conn:
+        existing = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+        if existing > 0:
+            print(f"Ya existen {existing} libros. Abortando para evitar duplicados.")
+            return
         creator_id = promote_user(conn, CREATOR_EMAIL)
         rows = build_rows(valid, creator_id)
         insert_books(conn, rows)
