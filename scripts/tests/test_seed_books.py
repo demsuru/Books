@@ -67,3 +67,71 @@ def test_build_rows_ids_are_unique():
     rows = build_rows(books, "uid-1")
     ids = [r[0] for r in rows]
     assert len(set(ids)) == 10
+
+
+# ── helpers de integración ────────────────────────────────────────────────────
+
+def make_test_db() -> sqlite3.Connection:
+    conn = sqlite3.connect(":memory:")
+    conn.execute("""
+        CREATE TABLE users (
+            id CHAR(36) NOT NULL,
+            email VARCHAR(320) NOT NULL,
+            hashed_password VARCHAR(1024) NOT NULL,
+            role VARCHAR(20) NOT NULL,
+            is_active BOOLEAN NOT NULL,
+            is_superuser BOOLEAN NOT NULL,
+            is_verified BOOLEAN NOT NULL,
+            PRIMARY KEY (id)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE books (
+            id UUID NOT NULL,
+            title VARCHAR NOT NULL,
+            author VARCHAR NOT NULL,
+            year INTEGER,
+            url VARCHAR,
+            creator_id UUID NOT NULL,
+            is_deleted BOOLEAN NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            deleted_at DATETIME,
+            PRIMARY KEY (id)
+        )
+    """)
+    conn.execute(
+        "INSERT INTO users VALUES (?,?,?,?,?,?,?)",
+        ("uid-test-001", "caro@libros.com", "hashed", "lector", 1, 0, 1),
+    )
+    conn.commit()
+    return conn
+
+
+# ── tests de operaciones DB ───────────────────────────────────────────────────
+
+def test_promote_user_sets_admin_and_returns_id():
+    from scripts.seed_books import promote_user
+    conn = make_test_db()
+    uid = promote_user(conn, "caro@libros.com")
+    assert uid == "uid-test-001"
+    row = conn.execute("SELECT role FROM users WHERE email=?", ("caro@libros.com",)).fetchone()
+    assert row[0] == "admin"
+
+
+def test_promote_user_raises_when_not_found():
+    from scripts.seed_books import promote_user
+    conn = make_test_db()
+    with pytest.raises(ValueError, match="no encontrado"):
+        promote_user(conn, "noexiste@libros.com")
+
+
+def test_insert_books_persists_rows():
+    from scripts.seed_books import build_rows, insert_books
+    conn = make_test_db()
+    books = [{"nombre": "Libro X", "autor": "Autor X"}]
+    rows = build_rows(books, "uid-test-001")
+    insert_books(conn, rows)
+    count = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+    assert count == 1
+    row = conn.execute("SELECT title, author, is_deleted FROM books").fetchone()
+    assert row == ("Libro X", "Autor X", 0)

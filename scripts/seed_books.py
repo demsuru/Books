@@ -30,3 +30,19 @@ def build_rows(books: list[dict], creator_id: str) -> list[tuple]:
         (str(uuid.uuid4()), b["nombre"], b["autor"], None, None, creator_id, 0, now)
         for b in books
     ]
+
+
+def promote_user(conn: sqlite3.Connection, email: str) -> str:
+    cur = conn.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
+    if cur.rowcount == 0:
+        raise ValueError(f"Usuario '{email}' no encontrado en la base de datos")
+    row = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+    return row[0]
+
+
+def insert_books(conn: sqlite3.Connection, rows: list[tuple]) -> None:
+    conn.executemany(
+        "INSERT INTO books (id, title, author, year, url, creator_id, is_deleted, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        rows,
+    )
