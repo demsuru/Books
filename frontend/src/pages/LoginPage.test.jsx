@@ -21,25 +21,25 @@ const renderLogin = () =>
 describe('LoginPage', () => {
   it('renders email and password inputs', () => {
     renderLogin();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
   });
 
   it('calls login with email and password on submit', async () => {
     mockLogin.mockResolvedValueOnce({});
     renderLogin();
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'a@b.com' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'pass123' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /entrar/i }));
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('a@b.com', 'pass123'));
   });
 
   it('shows error message when login fails', async () => {
     mockLogin.mockRejectedValueOnce(new Error('Invalid credentials'));
     renderLogin();
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'a@b.com' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrong' } });
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByRole('button', { name: /entrar/i }));
     await waitFor(() => expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument());
   });
 });

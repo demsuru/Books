@@ -30,16 +30,16 @@ describe('HomePage', () => {
 
   it('shows search input', () => {
     renderHome();
-    expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/buscar/i)).toBeInTheDocument();
   });
 
   it('shows Add Book button when logged in', () => {
     renderHome({ email: 'a@b.com' });
-    expect(screen.getByRole('button', { name: /add book/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /agregar libro/i })).toBeInTheDocument();
   });
 
   it('hides Add Book button when not logged in', () => {
     renderHome(null);
-    expect(screen.queryByRole('button', { name: /add book/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /agregar libro/i })).not.toBeInTheDocument();
   });
 });

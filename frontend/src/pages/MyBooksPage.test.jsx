@@ -37,9 +37,9 @@ describe('MyBooksPage', () => {
     await waitFor(() => expect(screen.getByText(/9\/10/)).toBeInTheDocument());
   });
 
-  it('shows "Not rated" for book without score', async () => {
+  it('shows "Sin puntuación" for book without score', async () => {
     renderPage();
-    await waitFor(() => expect(screen.getByText(/not rated/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/sin puntuación/i)).toBeInTheDocument());
   });
 
   it('redirects to / when no user', () => {

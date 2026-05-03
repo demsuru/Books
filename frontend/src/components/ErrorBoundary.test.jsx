@@ -13,7 +13,7 @@ describe('ErrorBoundary', () => {
   it('shows fallback UI on render error', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<ErrorBoundary><Bomb /></ErrorBoundary>);
-    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+    expect(screen.getByText(/algo salió mal/i)).toBeInTheDocument();
     spy.mockRestore();
   });
 });

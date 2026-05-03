@@ -22,12 +22,12 @@ describe('BookItem', () => {
 
   it('does not show edit/delete when no user', () => {
     renderBook(null);
-    expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /eliminar/i })).not.toBeInTheDocument();
   });
 
   it('shows Rate button when user is logged in', () => {
     renderBook({ id: '99', email: 'a@b.com' });
-    expect(screen.getByRole('button', { name: /rate/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /puntuar/i })).toBeInTheDocument();
   });
 
   it('shows delete button when user is creator', () => {
@@ -41,6 +41,6 @@ describe('BookItem', () => {
         />
       </AuthContext.Provider>
     );
-    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /eliminar/i })).toBeInTheDocument();
   });
 });

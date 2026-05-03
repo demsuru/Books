@@ -21,16 +21,16 @@ const renderRegister = () =>
 describe('RegisterPage', () => {
   it('renders email and password inputs', () => {
     renderRegister();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
   });
 
   it('calls register and redirects to login on success', async () => {
     mockRegister.mockResolvedValueOnce({ email: 'a@b.com' });
     renderRegister();
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'a@b.com' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'pass123' } });
-    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+    fireEvent.change(screen.getByLabelText(/correo/i), { target: { value: 'a@b.com' } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: 'pass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /crear cuenta/i }));
     await waitFor(() => expect(screen.getByText('login page')).toBeInTheDocument());
   });
 });
