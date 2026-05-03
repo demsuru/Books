@@ -4,14 +4,20 @@ import styles from './RatingSlider.module.css';
 import toast from 'react-hot-toast';
 
 export default function RatingSlider({ bookId, token, onClose, onSaved }) {
-  const [score, setScore] = useState(7);
+  const [score, setScore] = useState('');
   const [isRead, setIsRead] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
+    const parsed = parseFloat(score);
+    const rounded = Math.round(parsed * 10) / 10;
+    if (isNaN(parsed) || rounded < 1 || rounded > 5) {
+      toast.error('La puntuación debe estar entre 1 y 5');
+      return;
+    }
     setLoading(true);
     try {
-      await bookService.rateBook(bookId, { score, is_read: isRead }, token);
+      await bookService.rateBook(bookId, { score: rounded, is_read: isRead }, token);
       toast.success('Puntuación guardada');
       onSaved();
     } catch (err) {
@@ -24,17 +30,18 @@ export default function RatingSlider({ bookId, token, onClose, onSaved }) {
   return (
     <div className={styles.panel}>
       <div className={styles.row}>
-        <label className={styles.label} htmlFor="score-select">Score</label>
-        <select
-          id="score-select"
+        <label className={styles.label} htmlFor="score-input">Puntuación (1–5)</label>
+        <input
+          id="score-input"
+          type="number"
+          min="1"
+          max="5"
+          step="0.1"
           value={score}
-          onChange={(e) => setScore(Number(e.target.value))}
-          className={styles.select}
-        >
-          {Array.from({ length: 11 }, (_, i) => (
-            <option key={i} value={i}>{i}/10</option>
-          ))}
-        </select>
+          onChange={(e) => setScore(e.target.value)}
+          className={styles.input}
+          placeholder="ej. 4.7"
+        />
       </div>
       <div className={styles.row}>
         <label className={styles.checkLabel}>
