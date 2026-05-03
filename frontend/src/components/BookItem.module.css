@@ -1,9 +1,10 @@
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  border-top: 3px solid transparent;
   border-radius: var(--radius-md);
   padding: var(--space-5);
-  transition: box-shadow var(--transition), transform var(--transition);
+  transition: box-shadow var(--transition), transform var(--transition), border-top-color var(--transition);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -11,7 +12,8 @@
 
 .card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  border-top-color: var(--color-accent);
 }
 
 .meta {
@@ -22,9 +24,9 @@
 
 .year {
   font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  font-weight: 500;
+  color: var(--color-accent-text);
+  background: var(--color-accent-light);
   border-radius: 999px;
   padding: 2px var(--space-2);
 }

@@ -9,8 +9,12 @@
 
 .heading {
   font-size: var(--text-3xl);
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--color-text) 30%, var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .count {
@@ -49,6 +53,7 @@
 .searchInput:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow: var(--shadow-accent);
 }
 
 .grid {
