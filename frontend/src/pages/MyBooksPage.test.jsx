@@ -7,7 +7,7 @@ import MyBooksPage from './MyBooksPage';
 vi.mock('../services/bookService', () => ({
   default: {
     getMyBooks: vi.fn().mockResolvedValue([
-      { id: '1', title: 'Dune', author: 'Herbert', score: 9, is_read: true },
+      { id: '1', title: 'Dune', author: 'Herbert', score: 4.5, is_read: true },
       { id: '2', title: '1984', author: 'Orwell', score: null, is_read: false },
     ]),
     removeRating: vi.fn().mockResolvedValue(null),
@@ -34,7 +34,7 @@ describe('MyBooksPage', () => {
 
   it('shows score for rated book', async () => {
     renderPage();
-    await waitFor(() => expect(screen.getByText(/9\/10/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/4\.5\/5/)).toBeInTheDocument());
   });
 
   it('shows "Sin puntuación" for book without score', async () => {
