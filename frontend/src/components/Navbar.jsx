@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeToggle from './ThemeToggle';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -13,7 +14,9 @@ export default function Navbar() {
 
   return (
     <nav className={styles.nav}>
-      <Link to="/" className={styles.logo}>Books</Link>
+      <div className={styles.left}>
+        <Link to="/" className={styles.logo}>Books</Link>
+      </div>
       <div className={styles.links}>
         {user ? (
           <>
@@ -27,6 +30,7 @@ export default function Navbar() {
             <Link to="/register" className="btn btn-primary">Registrarse</Link>
           </>
         )}
+        <ThemeToggle />
       </div>
     </nav>
   );

@@ -51,6 +51,42 @@
   flex-wrap: wrap;
 }
 
+.iconBtnEdit,
+.iconBtnDelete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform 100ms ease;
+  flex-shrink: 0;
+}
+
+.iconBtnEdit {
+  background: var(--color-accent-light);
+  color: var(--color-accent-text);
+}
+
+.iconBtnEdit:hover {
+  background: var(--color-accent);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.iconBtnDelete {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--color-danger);
+}
+
+.iconBtnDelete:hover {
+  background: var(--color-danger);
+  color: #fff;
+  transform: scale(1.05);
+}
+
 .ratingPanel {
   width: 100%;
   padding-top: var(--space-2);

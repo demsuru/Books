@@ -6,10 +6,16 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-5);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--color-nav-bg);
   border-bottom: 2px solid var(--color-accent-light);
   backdrop-filter: blur(12px);
   max-width: 100%;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .logo {

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import HomePage from './pages/HomePage';
@@ -11,6 +12,7 @@ import MyBooksPage from './pages/MyBooksPage';
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <ErrorBoundary>
           <Layout>
@@ -24,6 +26,7 @@ export default function App() {
         </ErrorBoundary>
         <Toaster position="bottom-right" toastOptions={{ duration: 3000 }} />
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
