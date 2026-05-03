@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import bookService from '../services/bookService';
 import { useAuth } from '../contexts/AuthContext';
 import BookItem from '../components/BookItem';
@@ -17,6 +17,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const debounceRef = useRef(null);
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
@@ -36,8 +37,19 @@ export default function HomePage() {
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setQuery(value);
+    }, 300);
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
+    clearTimeout(debounceRef.current);
     setPage(1);
     setQuery(search);
   };
@@ -86,13 +98,13 @@ export default function HomePage() {
         <input
           type="search"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
           placeholder="Buscar título o autor…"
           className={styles.searchInput}
         />
         <button type="submit" className="btn btn-ghost">Buscar</button>
         {query && (
-          <button type="button" className="btn btn-ghost" onClick={() => { setSearch(''); setQuery(''); setPage(1); }}>
+          <button type="button" className="btn btn-ghost" onClick={() => { clearTimeout(debounceRef.current); setSearch(''); setQuery(''); setPage(1); }}>
             Limpiar
           </button>
         )}

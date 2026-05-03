@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 
 from src.db import get_async_session
@@ -41,7 +41,9 @@ async def get_all_books(
 ):
     query = select(Books).where(Books.is_deleted == False)
     if search:
-        query = query.where(Books.title.ilike(f"%{search}%"))
+        query = query.where(
+            or_(Books.title.ilike(f"%{search}%"), Books.author.ilike(f"%{search}%"))
+        )
     if author:
         query = query.where(Books.author.ilike(f"%{author}%"))
 
