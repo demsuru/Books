@@ -103,11 +103,11 @@ export default function HomePage() {
       ) : books.length === 0 ? (
         <p className={styles.empty}>No se encontraron libros.</p>
       ) : (
-        <div className={styles.grid}>
+        <ul className={styles.list}>
           {books.map((book) => (
             <BookItem key={book.id} book={book} onDelete={handleDelete} onUpdate={fetchBooks} />
           ))}
-        </div>
+        </ul>
       )}
 
       {pages > 1 && (

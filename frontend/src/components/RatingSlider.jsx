@@ -24,16 +24,17 @@ export default function RatingSlider({ bookId, token, onClose, onSaved }) {
   return (
     <div className={styles.panel}>
       <div className={styles.row}>
-        <label className={styles.label}>Score: <strong>{score}</strong>/10</label>
-        <input
-          type="range"
-          min={0}
-          max={10}
-          step={0.5}
+        <label className={styles.label} htmlFor="score-select">Score</label>
+        <select
+          id="score-select"
           value={score}
           onChange={(e) => setScore(Number(e.target.value))}
-          className={styles.slider}
-        />
+          className={styles.select}
+        >
+          {Array.from({ length: 11 }, (_, i) => (
+            <option key={i} value={i}>{i}/10</option>
+          ))}
+        </select>
       </div>
       <div className={styles.row}>
         <label className={styles.checkLabel}>

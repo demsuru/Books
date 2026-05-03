@@ -1,12 +1,13 @@
 import json
 import sqlite3
-import uuid
-from datetime import datetime, timezone
+import httpx
 from pathlib import Path
 
 JSON_PATH = Path(__file__).parent.parent / "libros2.json"
 DB_PATH = Path(__file__).parent.parent / "books.db"
+BASE_URL = "http://127.0.0.1:8000"
 CREATOR_EMAIL = "caro@libros.com"
+CREATOR_PASSWORD = "conavi10"
 
 
 def load_books(path: Path) -> list[dict]:
@@ -24,14 +25,6 @@ def filter_books(books: list[dict]) -> tuple[list[dict], int]:
     return valid, skipped
 
 
-def build_rows(books: list[dict], creator_id: str) -> list[tuple]:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-    return [
-        (str(uuid.uuid4()), b["nombre"], b["autor"], None, None, creator_id, 0, now)
-        for b in books
-    ]
-
-
 def promote_user(conn: sqlite3.Connection, email: str) -> str:
     cur = conn.execute("UPDATE users SET role='admin' WHERE email=?", (email,))
     if cur.rowcount == 0:
@@ -42,12 +35,47 @@ def promote_user(conn: sqlite3.Connection, email: str) -> str:
     return row[0]
 
 
-def insert_books(conn: sqlite3.Connection, rows: list[tuple]) -> None:
-    conn.executemany(
-        "INSERT INTO books (id, title, author, year, url, creator_id, is_deleted, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        rows,
+def clear_books(conn: sqlite3.Connection) -> int:
+    conn.execute("DELETE FROM user_book_association")
+    cur = conn.execute("DELETE FROM books")
+    return cur.rowcount
+
+
+def login(client: httpx.Client, email: str, password: str) -> str:
+    resp = client.post(
+        f"{BASE_URL}/auth/jwt/login",
+        data={"username": email, "password": password},
     )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def check_existing(client: httpx.Client, token: str) -> int:
+    resp = client.get(
+        f"{BASE_URL}/books/",
+        params={"page": 1, "limit": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp.raise_for_status()
+    return resp.json()["total"]
+
+
+def insert_books_via_api(
+    client: httpx.Client, books: list[dict], token: str
+) -> int:
+    headers = {"Authorization": f"Bearer {token}"}
+    inserted = 0
+    for book in books:
+        resp = client.post(
+            f"{BASE_URL}/books/",
+            json={"title": book["nombre"], "author": book["autor"], "year": 0},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        inserted += 1
+        if inserted % 100 == 0:
+            print(f"  {inserted}/{len(books)} insertados...")
+    return inserted
 
 
 def main() -> None:
@@ -55,15 +83,16 @@ def main() -> None:
     valid, skipped = filter_books(books_raw)
 
     with sqlite3.connect(DB_PATH) as conn:
-        existing = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
-        if existing > 0:
-            print(f"Ya existen {existing} libros. Abortando para evitar duplicados.")
-            return
-        creator_id = promote_user(conn, CREATOR_EMAIL)
-        rows = build_rows(valid, creator_id)
-        insert_books(conn, rows)
+        cleared = clear_books(conn)
+        if cleared:
+            print(f"Limpiados {cleared} libros existentes.")
+        promote_user(conn, CREATOR_EMAIL)
 
-    print(f"{len(rows)} libros insertados, {skipped} omitidos (anonymous)")
+    with httpx.Client(timeout=30.0) as client:
+        token = login(client, CREATOR_EMAIL, CREATOR_PASSWORD)
+        inserted = insert_books_via_api(client, valid, token)
+
+    print(f"{inserted} libros insertados, {skipped} omitidos (anonymous)")
 
 
 if __name__ == "__main__":

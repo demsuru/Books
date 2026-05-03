@@ -2,6 +2,7 @@ import json
 import sqlite3
 import pytest
 from pathlib import Path
+from unittest.mock import MagicMock
 
 
 def test_load_books_returns_list(tmp_path):
@@ -44,31 +45,6 @@ def test_filter_books_all_valid():
     assert skipped == 0
 
 
-def test_build_rows_structure():
-    from scripts.seed_books import build_rows
-    books = [{"nombre": "Título", "autor": "Autor"}]
-    creator_id = "abc-123"
-    rows = build_rows(books, creator_id)
-    assert len(rows) == 1
-    row = rows[0]
-    # (id, title, author, year, url, creator_id, is_deleted, created_at)
-    assert len(row) == 8
-    assert row[1] == "Título"
-    assert row[2] == "Autor"
-    assert row[3] is None   # year
-    assert row[4] is None   # url
-    assert row[5] == "abc-123"
-    assert row[6] == 0      # is_deleted
-
-
-def test_build_rows_ids_are_unique():
-    from scripts.seed_books import build_rows
-    books = [{"nombre": f"Libro {i}", "autor": "X"} for i in range(10)]
-    rows = build_rows(books, "uid-1")
-    ids = [r[0] for r in rows]
-    assert len(set(ids)) == 10
-
-
 # ── helpers de integración ────────────────────────────────────────────────────
 
 def make_test_db() -> sqlite3.Connection:
@@ -87,16 +63,25 @@ def make_test_db() -> sqlite3.Connection:
     """)
     conn.execute("""
         CREATE TABLE books (
-            id UUID NOT NULL,
+            id VARCHAR(36) NOT NULL,
             title VARCHAR NOT NULL,
             author VARCHAR NOT NULL,
             year INTEGER,
             url VARCHAR,
-            creator_id UUID NOT NULL,
+            creator_id VARCHAR(36) NOT NULL,
             is_deleted BOOLEAN NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             deleted_at DATETIME,
             PRIMARY KEY (id)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE user_book_association (
+            user_id VARCHAR(36) NOT NULL,
+            book_id VARCHAR(36) NOT NULL,
+            score REAL,
+            is_read BOOLEAN NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, book_id)
         )
     """)
     conn.execute(
@@ -107,7 +92,7 @@ def make_test_db() -> sqlite3.Connection:
     return conn
 
 
-# ── tests de operaciones DB ───────────────────────────────────────────────────
+# ── tests promote_user ────────────────────────────────────────────────────────
 
 def test_promote_user_sets_admin_and_returns_id():
     from scripts.seed_books import promote_user
@@ -125,13 +110,146 @@ def test_promote_user_raises_when_not_found():
         promote_user(conn, "noexiste@libros.com")
 
 
-def test_insert_books_persists_rows():
-    from scripts.seed_books import build_rows, insert_books
+# ── tests clear_books ─────────────────────────────────────────────────────────
+
+def test_clear_books_removes_all_books():
+    from scripts.seed_books import clear_books
     conn = make_test_db()
-    books = [{"nombre": "Libro X", "autor": "Autor X"}]
-    rows = build_rows(books, "uid-test-001")
-    insert_books(conn, rows)
-    count = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+    conn.execute(
+        "INSERT INTO books VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP,NULL)",
+        ("id-1", "Título", "Autor", None, None, "uid-test-001", 0),
+    )
+    conn.commit()
+    count = clear_books(conn)
     assert count == 1
-    row = conn.execute("SELECT title, author, is_deleted FROM books").fetchone()
-    assert row == ("Libro X", "Autor X", 0)
+    remaining = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+    assert remaining == 0
+
+
+def test_clear_books_also_removes_associations():
+    from scripts.seed_books import clear_books
+    conn = make_test_db()
+    conn.execute(
+        "INSERT INTO books VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP,NULL)",
+        ("id-1", "Título", "Autor", None, None, "uid-test-001", 0),
+    )
+    conn.execute(
+        "INSERT INTO user_book_association VALUES (?,?,?,?)",
+        ("uid-test-001", "id-1", 8.0, 1),
+    )
+    conn.commit()
+    clear_books(conn)
+    assoc = conn.execute("SELECT COUNT(*) FROM user_book_association").fetchone()[0]
+    assert assoc == 0
+
+
+def test_clear_books_returns_zero_when_empty():
+    from scripts.seed_books import clear_books
+    conn = make_test_db()
+    count = clear_books(conn)
+    assert count == 0
+
+
+# ── tests login ───────────────────────────────────────────────────────────────
+
+def test_login_returns_access_token():
+    from scripts.seed_books import login
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"access_token": "tok-abc123"}
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_resp
+
+    token = login(mock_client, "user@test.com", "secret")
+
+    assert token == "tok-abc123"
+    mock_resp.raise_for_status.assert_called_once()
+
+
+def test_login_calls_correct_endpoint():
+    from scripts.seed_books import login, BASE_URL
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"access_token": "tok"}
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_resp
+
+    login(mock_client, "u@e.com", "p")
+
+    call_args = mock_client.post.call_args
+    assert BASE_URL in call_args[0][0]
+    assert call_args[1]["data"]["username"] == "u@e.com"
+    assert call_args[1]["data"]["password"] == "p"
+
+
+# ── tests check_existing ──────────────────────────────────────────────────────
+
+def test_check_existing_returns_total():
+    from scripts.seed_books import check_existing
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"total": 42, "items": [], "page": 1, "pages": 3}
+    mock_client = MagicMock()
+    mock_client.get.return_value = mock_resp
+
+    total = check_existing(mock_client, "my-token")
+
+    assert total == 42
+    mock_resp.raise_for_status.assert_called_once()
+
+
+def test_check_existing_returns_zero_when_empty():
+    from scripts.seed_books import check_existing
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"total": 0, "items": [], "page": 1, "pages": 0}
+    mock_client = MagicMock()
+    mock_client.get.return_value = mock_resp
+
+    assert check_existing(mock_client, "tok") == 0
+
+
+# ── tests insert_books_via_api ────────────────────────────────────────────────
+
+def test_insert_books_via_api_calls_api_for_each_book():
+    from scripts.seed_books import insert_books_via_api
+    mock_resp = MagicMock()
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_resp
+
+    books = [{"nombre": "Libro A", "autor": "Autor A"}, {"nombre": "Libro B", "autor": "Autor B"}]
+    count = insert_books_via_api(mock_client, books, "tok")
+
+    assert count == 2
+    assert mock_client.post.call_count == 2
+
+
+def test_insert_books_via_api_sends_correct_payload():
+    from scripts.seed_books import insert_books_via_api
+    mock_resp = MagicMock()
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_resp
+
+    books = [{"nombre": "Don Quijote", "autor": "Cervantes"}]
+    insert_books_via_api(mock_client, books, "tok")
+
+    payload = mock_client.post.call_args[1]["json"]
+    assert payload["title"] == "Don Quijote"
+    assert payload["author"] == "Cervantes"
+    assert payload["year"] == 0
+
+
+def test_insert_books_via_api_sends_auth_header():
+    from scripts.seed_books import insert_books_via_api
+    mock_resp = MagicMock()
+    mock_client = MagicMock()
+    mock_client.post.return_value = mock_resp
+
+    insert_books_via_api(mock_client, [{"nombre": "X", "autor": "Y"}], "mi-token")
+
+    headers = mock_client.post.call_args[1]["headers"]
+    assert headers["Authorization"] == "Bearer mi-token"
+
+
+def test_insert_books_via_api_empty_list_returns_zero():
+    from scripts.seed_books import insert_books_via_api
+    mock_client = MagicMock()
+    count = insert_books_via_api(mock_client, [], "tok")
+    assert count == 0
+    mock_client.post.assert_not_called()

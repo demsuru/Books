@@ -9,13 +9,13 @@ export default function BookItem({ book, onDelete, onUpdate }) {
   const isOwner = user && (user.id === book.creator_id || user.role === 'admin');
 
   return (
-    <article className={styles.card}>
-      <div className={styles.meta}>
-        {book.year && <span className={styles.year}>{book.year}</span>}
+    <li className={styles.item}>
+      <div className={styles.info}>
+        <span className={styles.title}>{book.title}</span>
+        <span className={styles.author}>{book.author}</span>
       </div>
-      <h2 className={styles.title}>{book.title}</h2>
-      <p className={styles.author}>{book.author}</p>
-      <div className={styles.actions}>
+      {book.year && <span className={styles.year}>{book.year}</span>}
+      <div className={styles.right}>
         {user && !showRating && (
           <button className="btn btn-ghost" onClick={() => setShowRating(true)}>
             Puntuar
@@ -28,13 +28,15 @@ export default function BookItem({ book, onDelete, onUpdate }) {
         )}
       </div>
       {showRating && (
-        <RatingSlider
-          bookId={book.id}
-          token={token}
-          onClose={() => setShowRating(false)}
-          onSaved={() => setShowRating(false)}
-        />
+        <div className={styles.ratingPanel}>
+          <RatingSlider
+            bookId={book.id}
+            token={token}
+            onClose={() => setShowRating(false)}
+            onSaved={() => setShowRating(false)}
+          />
+        </div>
       )}
-    </article>
+    </li>
   );
 }
