@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import bookService from '../services/bookService';
@@ -10,64 +10,147 @@ import logger from '../utils/logger';
 export default function MyBooksPage() {
   const { user, token } = useAuth();
   const [books, setBooks] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState(null);
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  const [search, setSearch] = useState('');
+  const debounceRef = useRef(null);
+  const sortMenuRef = useRef(null);
+
+  const fetchBooks = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const params = { page, search: query };
+      if (sort) { params.sort_by = 'score'; params.order = sort; }
+      const data = await bookService.getMyBooks(token, params);
+      setBooks(data.items);
+      setTotal(data.total);
+      setPages(data.pages);
+      logger.info('My books loaded', data.total);
+    } catch (err) {
+      toast.error('No se pudieron cargar tus libros');
+      logger.error('getMyBooks failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, query, sort, token]);
+
+  useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
   useEffect(() => {
-    if (!token) return;
-    bookService.getMyBooks(token)
-      .then((data) => { setBooks(data); logger.info('My books loaded', data.length); })
-      .catch((err) => { toast.error('No se pudieron cargar tus libros'); logger.error('getMyBooks failed', err.message); })
-      .finally(() => setLoading(false));
-  }, [token]);
+    if (!showSortMenu) return;
+    const handler = (e) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target)) {
+        setShowSortMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showSortMenu]);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => { setPage(1); setQuery(value); }, 300);
+  };
+
+  const handleSortSelect = (value) => {
+    setSort(value);
+    setPage(1);
+    setShowSortMenu(false);
+  };
 
   const handleRemove = async (id) => {
     try {
       await bookService.removeRating(id, token);
-      setBooks((prev) => prev.filter((b) => b.id !== id));
       toast.success('Eliminado de tu lista');
+      if (books.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        fetchBooks();
+      }
     } catch (err) {
       toast.error(err.message || 'No se pudo eliminar');
       logger.error('removeRating failed', err.message);
     }
   };
 
-  const filtered = books.filter((b) => {
-    const q = search.toLowerCase();
-    return b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q);
-  });
-
   if (!user) return <Navigate to="/" replace />;
 
   return (
     <div>
       <h1 className={styles.heading}>Mis libros</h1>
-      {!loading && books.length > 0 && (
+
+      {(total > 0 || query || sort) && (
         <div className={styles.searchRow}>
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Buscar título o autor…"
             className={styles.searchInput}
           />
-          {search && (
-            <button type="button" className="btn btn-ghost" onClick={() => setSearch('')}>
+          <div className={styles.sortMenuWrapper} ref={sortMenuRef}>
+            <button
+              type="button"
+              className={`${styles.filterBtn}${sort ? ' ' + styles.filterBtnActive : ''}`}
+              onClick={() => setShowSortMenu((v) => !v)}
+              title="Ordenar"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="11" y2="6"/><circle cx="14" cy="6" r="3"/>
+                <line x1="4" y1="12" x2="9" y2="12"/><circle cx="12" cy="12" r="3"/>
+                <line x1="4" y1="18" x2="13" y2="18"/><circle cx="16" cy="18" r="3"/>
+              </svg>
+            </button>
+            {showSortMenu && (
+              <div className={styles.sortMenu}>
+                <button
+                  className={`${styles.sortMenuItem}${sort === null ? ' ' + styles.sortMenuItemActive : ''}`}
+                  onClick={() => handleSortSelect(null)}
+                >Sin ordenar</button>
+                <button
+                  className={`${styles.sortMenuItem}${sort === 'asc' ? ' ' + styles.sortMenuItemActive : ''}`}
+                  onClick={() => handleSortSelect('asc')}
+                >↑ Menor a mayor</button>
+                <button
+                  className={`${styles.sortMenuItem}${sort === 'desc' ? ' ' + styles.sortMenuItemActive : ''}`}
+                  onClick={() => handleSortSelect('desc')}
+                >↓ Mayor a menor</button>
+              </div>
+            )}
+          </div>
+          {(query || sort) && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                clearTimeout(debounceRef.current);
+                setSearch(''); setQuery(''); setSort(null); setPage(1);
+              }}
+            >
               Limpiar
             </button>
           )}
         </div>
       )}
+
       {loading ? (
         <div className={styles.loading}>Cargando…</div>
-      ) : books.length === 0 ? (
+      ) : books.length === 0 && !query && !sort ? (
         <p className={styles.empty}>Aún no has agregado ningún libro.</p>
-      ) : filtered.length === 0 ? (
+      ) : books.length === 0 ? (
         <p className={styles.empty}>No se encontraron libros.</p>
       ) : (
         <ul className={styles.list}>
-          {filtered.map((book) => (
+          {books.map((book) => (
             <li key={book.id} className={styles.item}>
               <div className={styles.info}>
                 <span className={styles.title}>{book.title}</span>
@@ -111,13 +194,25 @@ export default function MyBooksPage() {
                     bookId={book.id}
                     token={token}
                     onClose={() => setEditingId(null)}
-                    onSaved={() => setEditingId(null)}
+                    onSaved={() => { setEditingId(null); fetchBooks(); }}
                   />
                 </div>
               )}
             </li>
           ))}
         </ul>
+      )}
+
+      {pages > 1 && (
+        <div className={styles.pagination}>
+          <button className="btn btn-ghost" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+            Anterior
+          </button>
+          <span className={styles.pageInfo}>Página {page} de {pages}</span>
+          <button className="btn btn-ghost" disabled={page === pages} onClick={() => setPage((p) => p + 1)}>
+            Siguiente
+          </button>
+        </div>
       )}
     </div>
   );
