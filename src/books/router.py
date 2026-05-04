@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, nullslast
 from sqlalchemy.orm import selectinload
 
 from src.db import get_async_session
 from src.books.models import Books, UserBookAssociation
 from src.books.schema import (
-    BookCreate, BookRateList, BookRead, RatingCreate, BookUpdate,
+    BookCreate, BookRateList, BookRateListResponse, BookRead, RatingCreate, BookUpdate,
     BookListResponse, RatingResponse
 )
 from src.users.manager import current_active_user
@@ -59,21 +59,51 @@ async def get_all_books(
 
 
 # GET PARA BUSCAR LOS LIBROS ASOCIADOS A UN USUARIO
-@router.get("/mybooks", response_model=list[BookRateList])
+@router.get("/mybooks", response_model=BookRateListResponse)
 async def get_my_books(
     user=Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
+    pagination: PaginationParams = Depends(),
+    search: str | None = Query(None),
+    sort_by: str | None = Query(None),
+    order: str | None = Query(None),
 ):
-    stmt = (
+    base_stmt = (
         select(UserBookAssociation)
         .where(UserBookAssociation.user_id == user.id)
         .join(UserBookAssociation.book)
         .where(Books.is_deleted == False)
-        .options(selectinload(UserBookAssociation.book))
     )
-    result = await session.execute(stmt)
+
+    if search:
+        base_stmt = base_stmt.where(
+            or_(Books.title.ilike(f"%{search}%"), Books.author.ilike(f"%{search}%"))
+        )
+
+    count_result = await session.execute(
+        select(func.count()).select_from(base_stmt.subquery())
+    )
+    total = count_result.scalar()
+
+    if sort_by == "score":
+        col = UserBookAssociation.score
+        if order == "asc":
+            base_stmt = base_stmt.order_by(nullslast(col.asc()))
+        else:
+            base_stmt = base_stmt.order_by(nullslast(col.desc()))
+
+    fetch_stmt = (
+        base_stmt
+        .options(selectinload(UserBookAssociation.book))
+        .offset(pagination.offset)
+        .limit(pagination.limit)
+    )
+    result = await session.execute(fetch_stmt)
     associations = result.scalars().all()
-    return [
+
+    pages = (total + pagination.limit - 1) // pagination.limit if total > 0 else 0
+
+    items = [
         BookRateList(
             id=a.book.id,
             title=a.book.title,
@@ -84,6 +114,8 @@ async def get_my_books(
         )
         for a in associations
     ]
+
+    return BookRateListResponse(items=items, total=total, page=pagination.page, pages=pages)
 
 
 # PATCH PARA MODIFICAR LIBROS EXISTENTES (con verificacion de propiedad)
