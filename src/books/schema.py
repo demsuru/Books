@@ -62,3 +62,9 @@ class BookListResponse(BaseModel):
 class RatingResponse(BaseModel):
     message: str
     status: str
+
+class BookRateListResponse(BaseModel):
+    items: list[BookRateList]
+    total: int
+    page: int
+    pages: int
