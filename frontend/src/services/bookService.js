@@ -74,9 +74,13 @@ const bookService = {
     return handleResponse(res);
   },
 
-  async getMyBooks(token) {
-    logger.info('GET /books/mybooks');
-    const res = await fetch(`${BASE}/books/mybooks`, {
+  async getMyBooks(token, { page = 1, limit = 20, search = '', sort_by = '', order = '' } = {}) {
+    const params = new URLSearchParams({ page, limit });
+    if (search) params.set('search', search);
+    if (sort_by) params.set('sort_by', sort_by);
+    if (order) params.set('order', order);
+    logger.info('GET /books/mybooks', params.toString());
+    const res = await fetch(`${BASE}/books/mybooks?${params}`, {
       headers: { ...authHeader(token) },
     });
     return handleResponse(res);

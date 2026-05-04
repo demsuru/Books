@@ -7,6 +7,9 @@ global.fetch = mockFetch;
 const jsonOk = (data, status = 200) =>
   Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(data) });
 
+const paginatedOk = (items = []) =>
+  jsonOk({ items, total: items.length, page: 1, pages: 1 });
+
 describe('bookService', () => {
   beforeEach(() => mockFetch.mockReset());
 
@@ -50,8 +53,8 @@ describe('bookService', () => {
     expect(call[1].headers.Authorization).toBe('Bearer tok');
   });
 
-  it('getMyBooks passes auth token', async () => {
-    mockFetch.mockReturnValueOnce(jsonOk([]));
+  it('getMyBooks passes auth token and returns paginated response', async () => {
+    mockFetch.mockReturnValueOnce(paginatedOk([]));
     await bookService.getMyBooks('tok');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining('/books/mybooks'),
@@ -59,5 +62,15 @@ describe('bookService', () => {
         headers: expect.objectContaining({ Authorization: 'Bearer tok' }),
       })
     );
+  });
+
+  it('getMyBooks passes page, search, sort_by and order params', async () => {
+    mockFetch.mockReturnValueOnce(paginatedOk([]));
+    await bookService.getMyBooks('tok', { page: 2, search: 'dune', sort_by: 'score', order: 'desc' });
+    const url = mockFetch.mock.calls[0][0];
+    expect(url).toContain('page=2');
+    expect(url).toContain('search=dune');
+    expect(url).toContain('sort_by=score');
+    expect(url).toContain('order=desc');
   });
 });
