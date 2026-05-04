@@ -54,6 +54,10 @@ export default function MyBooksPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showSortMenu]);
 
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearch(value);
@@ -67,7 +71,7 @@ export default function MyBooksPage() {
     setShowSortMenu(false);
   };
 
-  const handleRemove = async (id) => {
+  const handleRemove = useCallback(async (id) => {
     try {
       await bookService.removeRating(id, token);
       toast.success('Eliminado de tu lista');
@@ -80,7 +84,7 @@ export default function MyBooksPage() {
       toast.error(err.message || 'No se pudo eliminar');
       logger.error('removeRating failed', err.message);
     }
-  };
+  }, [fetchBooks, page, books.length, token]);
 
   if (!user) return <Navigate to="/" replace />;
 
