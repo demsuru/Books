@@ -1,7 +1,12 @@
 venv/
+.venv/
 __pycache__/
 *.pyc
 .env
 *.db
 .vscode/
 .worktrees/
+.playwright-mcp/
+libros2.json
+docs/superpowers/plans/
+*.png
