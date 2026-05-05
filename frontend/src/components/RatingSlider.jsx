@@ -10,7 +10,7 @@ export default function RatingSlider({ bookId, token, onClose, onSaved }) {
 
   const handleSave = async () => {
     const parsed = parseFloat(score);
-    const rounded = Math.round(parsed * 10) / 10;
+    const rounded = Math.round(parsed * 100) / 100;
     if (isNaN(parsed) || rounded < 1 || rounded > 5) {
       toast.error('La puntuación debe estar entre 1 y 5');
       return;

@@ -165,7 +165,7 @@ export default function MyBooksPage() {
                   {book.is_read ? 'Leído' : 'Sin leer'}
                 </span>
                 <span className={styles.score}>
-                  {book.score != null ? `${book.score}/5` : 'Sin puntuación'}
+                  {book.score != null ? book.score : 'Sin puntuación'}
                 </span>
               </div>
               <div className={styles.buttons}>
