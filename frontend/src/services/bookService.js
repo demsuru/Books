@@ -1,7 +1,5 @@
 import logger from '../utils/logger';
 
-const BASE = 'http://127.0.0.1:8000';
-
 const authHeader = (token) => token ? { Authorization: `Bearer ${token}` } : {};
 
 const handleResponse = async (res) => {
@@ -20,7 +18,7 @@ const bookService = {
     if (search) params.set('search', search);
     if (author) params.set('author', author);
     logger.info('GET /books/', params.toString());
-    const res = await fetch(`${BASE}/books/?${params}`, {
+    const res = await fetch(`/books/?${params}`, {
       headers: {},
     });
     return handleResponse(res);
@@ -28,7 +26,7 @@ const bookService = {
 
   async createBook(data, token) {
     logger.info('POST /books/', data.title);
-    const res = await fetch(`${BASE}/books/`, {
+    const res = await fetch(`/books/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader(token) },
       body: JSON.stringify(data),
@@ -38,7 +36,7 @@ const bookService = {
 
   async updateBook(id, data, token) {
     logger.info('PATCH /books/' + id);
-    const res = await fetch(`${BASE}/books/${id}`, {
+    const res = await fetch(`/books/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeader(token) },
       body: JSON.stringify(data),
@@ -48,7 +46,7 @@ const bookService = {
 
   async deleteBook(id, token) {
     logger.info('DELETE /books/' + id);
-    const res = await fetch(`${BASE}/books/${id}`, {
+    const res = await fetch(`/books/${id}`, {
       method: 'DELETE',
       headers: { ...authHeader(token) },
     });
@@ -57,7 +55,7 @@ const bookService = {
 
   async rateBook(id, data, token) {
     logger.info('POST /books/' + id + '/rate', data);
-    const res = await fetch(`${BASE}/books/${id}/rate`, {
+    const res = await fetch(`/books/${id}/rate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeader(token) },
       body: JSON.stringify(data),
@@ -67,7 +65,7 @@ const bookService = {
 
   async removeRating(id, token) {
     logger.info('DELETE /books/' + id + '/rate');
-    const res = await fetch(`${BASE}/books/${id}/rate`, {
+    const res = await fetch(`/books/${id}/rate`, {
       method: 'DELETE',
       headers: { ...authHeader(token) },
     });
@@ -80,7 +78,7 @@ const bookService = {
     if (sort_by) params.set('sort_by', sort_by);
     if (order) params.set('order', order);
     logger.info('GET /books/mybooks', params.toString());
-    const res = await fetch(`${BASE}/books/mybooks?${params}`, {
+    const res = await fetch(`/books/mybooks?${params}`, {
       headers: { ...authHeader(token) },
     });
     return handleResponse(res);

@@ -1,11 +1,9 @@
 import logger from '../utils/logger';
 
-const BASE = 'http://127.0.0.1:8000';
-
 const authService = {
   async login(email, password) {
     const body = new URLSearchParams({ username: email, password });
-    const res = await fetch(`${BASE}/auth/jwt/login`, {
+    const res = await fetch(`/auth/jwt/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -18,7 +16,7 @@ const authService = {
   },
 
   async register(email, password) {
-    const res = await fetch(`${BASE}/auth/register`, {
+    const res = await fetch(`/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -32,7 +30,7 @@ const authService = {
   },
 
   async getMe(token) {
-    const res = await fetch(`${BASE}/users/me`, {
+    const res = await fetch(`/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Unauthorized');

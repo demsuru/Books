@@ -35,8 +35,8 @@ class BookRateList(BaseModel):
 class RatingCreate(BaseModel):
     score: Optional[float] = Field(
         None,
-        ge=1.0,
-        le=5.0,
+        ge=1.00,
+        le=5.00,
         description="Puntuacion del libro (de 1 a 5, un decimal). Opcional."
     )
 

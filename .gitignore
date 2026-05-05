@@ -1,12 +1,30 @@
+# Python
 venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment
 .env
+
+# Databases
 *.db
+
+# OS
+.DS_Store
+
+# Editors
 .vscode/
+.idea/
+
+# Dev tools / local only
 .worktrees/
 .playwright-mcp/
 libros2.json
+
+# Internal planning docs
 docs/superpowers/plans/
-*.png
+docs/superpowers/specs/
