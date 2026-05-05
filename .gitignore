@@ -24,6 +24,8 @@ __pycache__/
 .worktrees/
 .playwright-mcp/
 libros2.json
+*.png
+!docs/screenshots/*.png
 
 # Internal planning docs
 docs/superpowers/plans/

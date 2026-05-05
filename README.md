@@ -2,6 +2,14 @@
 
 A personal project for learning full-stack web development. A book-tracking app where users can register, add books, rate them (1–5), and manage their reading list.
 
+## Screenshots
+
+![Home](docs/screenshots/home.png)
+*Vista general — listado de libros con búsqueda*
+
+![My Books](docs/screenshots/mybooks.png)
+*Mis libros — lista personal con puntuación, filtros y paginación*
+
 ## Stack
 
 - **Backend:** FastAPI, SQLAlchemy (async), fastapi-users, Alembic, MongoDB (request logging)
